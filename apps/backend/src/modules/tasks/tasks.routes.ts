@@ -21,7 +21,7 @@ const router = Router({ mergeParams: true });
  */
 router.get("/all", authenticate, async (req: AuthRequest, res) => {
   const { findAllByUser } = await import("./tasks.repository");
-  const tasks = await findAllByUser(req.user!.id, req.user!.role);
+  const tasks = await findAllByUser(req.authUser!.id, req.authUser!.role);
   res.json(tasks);
 });
 

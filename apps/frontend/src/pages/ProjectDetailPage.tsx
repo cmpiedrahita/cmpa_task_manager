@@ -101,6 +101,27 @@ export default function ProjectDetailPage() {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+
+  const editForm = useForm<TaskFormData>({ resolver: zodResolver(taskSchema) });
+
+  const openEdit = (task: Task) => {
+    editForm.reset({
+      title: task.title,
+      description: task.description,
+      priority: task.priority,
+      due_date: task.due_date?.split("T")[0] ?? "",
+    });
+    setEditingTask(task);
+  };
+
+  const onEditSubmit = async (data: TaskFormData) => {
+    if (!editingTask) return;
+    await api.patch(`/tasks/${editingTask.id}`, data);
+    setLocalTasks((prev) => prev.map((t) => t.id === editingTask.id ? { ...t, ...data } : t));
+    setEditingTask(null);
+    toast.success("Tarea actualizada");
+  };
 
   useEffect(() => {
     setLocalTasks(serverTasks);
@@ -208,12 +229,15 @@ export default function ProjectDetailPage() {
                               </p>
                             )}
                             <div className="flex gap-1 mt-1">
-                              <button onClick={() => setSelectedTask(task)} className="text-xs text-blue-500 hover:text-blue-700">
+                              <button onClick={() => setSelectedTask(task)} className="text-xs px-2 py-1 rounded-md border border-blue-200 dark:border-blue-700 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
                                 Ver
+                              </button>
+                              <button onClick={() => openEdit(task)} className="text-xs px-2 py-1 rounded-md border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
+                                Editar
                               </button>
                               <button
                                 onClick={() => { if (confirm("¿Eliminar tarea?")) deleteTask.mutate(task.id); }}
-                                className="text-xs text-red-400 hover:text-red-600"
+                                className="text-xs px-2 py-1 rounded-md border border-red-200 dark:border-red-800 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
                               >
                                 Eliminar
                               </button>
@@ -260,6 +284,37 @@ export default function ProjectDetailPage() {
               Cancelar
             </Button>
             <Button type="submit" loading={isSubmitting}>Crear</Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={!!editingTask} onClose={() => setEditingTask(null)} title="Editar tarea">
+        <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="flex flex-col gap-4">
+          <Input label="Título" {...editForm.register("title")} error={editForm.formState.errors.title?.message} />
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Descripción</label>
+            <textarea
+              {...editForm.register("description")}
+              rows={3}
+              className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm bg-white dark:bg-gray-800 dark:text-gray-100 outline-none focus:border-blue-500 resize-none"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Prioridad</label>
+            <select
+              {...editForm.register("priority")}
+              className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm bg-white dark:bg-gray-800 dark:text-gray-100 outline-none focus:border-blue-500"
+            >
+              <option value="low">Baja</option>
+              <option value="medium">Media</option>
+              <option value="high">Alta</option>
+              <option value="critical">Crítica</option>
+            </select>
+          </div>
+          <Input label="Fecha límite" type="date" {...editForm.register("due_date")} />
+          <div className="flex justify-end gap-2 mt-2">
+            <Button variant="secondary" type="button" onClick={() => setEditingTask(null)}>Cancelar</Button>
+            <Button type="submit" loading={editForm.formState.isSubmitting}>Guardar</Button>
           </div>
         </form>
       </Modal>

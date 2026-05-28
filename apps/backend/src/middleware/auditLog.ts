@@ -8,14 +8,14 @@ export const auditLog =
     const originalJson = res.json.bind(res);
 
     res.json = (body: unknown) => {
-      if (res.statusCode < 400 && req.user) {
+      if (res.statusCode < 400 && req.authUser) {
         db("audit_log")
           .insert({
             table_name: tableName,
             action,
             new_data: JSON.stringify(body),
             old_data: req.body ? JSON.stringify(req.body) : null,
-            user_id: req.user.id,
+            user_id: req.authUser.id,
           })
           .catch(() => {});
       }

@@ -24,21 +24,21 @@ export const getById = async (req: AuthRequest, res: Response) => {
 
 export const create = async (req: AuthRequest, res: Response) => {
   try {
-    const task = await tasksService.create(req.params.projectId, req.body, req.user!.id, req.user!.role);
+    const task = await tasksService.create(req.params.projectId, req.body, req.authUser!.id, req.authUser!.role);
     res.status(201).json(task);
   } catch (e) { handleError(e, res); }
 };
 
 export const update = async (req: AuthRequest, res: Response) => {
   try {
-    const task = await tasksService.update(req.params.id, req.body, req.user!.id, req.user!.role);
+    const task = await tasksService.update(req.params.id, req.body, req.authUser!.id, req.authUser!.role);
     res.json(task);
   } catch (e) { handleError(e, res); }
 };
 
 export const remove = async (req: AuthRequest, res: Response) => {
   try {
-    await tasksService.remove(req.params.id, req.user!.id, req.user!.role);
+    await tasksService.remove(req.params.id, req.authUser!.id, req.authUser!.role);
     res.status(204).send();
   } catch (e) { handleError(e, res); }
 };
