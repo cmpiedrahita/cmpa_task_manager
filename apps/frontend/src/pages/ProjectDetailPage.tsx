@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { DragDropContext, Droppable, Draggable, DropResult } from "@hello-pangea/dnd";
 import { useForm } from "react-hook-form";
@@ -6,11 +6,15 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useProject } from "../hooks/useProjects";
 import { useTasks, useCreateTask, useUpdateTask, useDeleteTask } from "../hooks/useTasks";
+import { useComments, useCreateComment, useDeleteComment } from "../hooks/useComments";
+import { useAuthStore } from "../store/authStore";
 import { Task, TaskStatus } from "../types";
 import { StatusBadge, PriorityBadge } from "../components/ui/Badge";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import Modal from "../components/ui/Modal";
+import toast from "react-hot-toast";
+import api from "../lib/axios";
 
 const COLUMNS: { id: TaskStatus; label: string }[] = [
   { id: "todo", label: "Por hacer" },
@@ -19,20 +23,78 @@ const COLUMNS: { id: TaskStatus; label: string }[] = [
   { id: "done", label: "Completada" },
 ];
 
-const schema = z.object({
+const taskSchema = z.object({
   title: z.string().min(2, "Mínimo 2 caracteres"),
   description: z.string().optional(),
   priority: z.enum(["low", "medium", "high", "critical"]).optional(),
   due_date: z.string().optional(),
 });
 
-type FormData = z.infer<typeof schema>;
+type TaskFormData = z.infer<typeof taskSchema>;
+
+function TaskComments({ taskId }: { taskId: string }) {
+  const { data: comments = [] } = useComments(taskId);
+  const createComment = useCreateComment(taskId);
+  const deleteComment = useDeleteComment(taskId);
+  const user = useAuthStore((s) => s.user);
+  const [text, setText] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!text.trim()) return;
+    await createComment.mutateAsync(text.trim());
+    setText("");
+  };
+
+  return (
+    <div className="flex flex-col gap-3 mt-2">
+      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+        Comentarios ({comments.length})
+      </h4>
+      <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
+        {comments.length === 0 && (
+          <p className="text-xs text-gray-400">Sin comentarios aún.</p>
+        )}
+        {comments.map((c) => (
+          <div key={c.id} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{c.author_name}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-gray-400">
+                  {new Date(c.created_at).toLocaleDateString()}
+                </span>
+                {(c.author_id === user?.id || user?.role === "admin") && (
+                  <button onClick={() => deleteComment.mutate(c.id)} className="text-xs text-red-400 hover:text-red-600">
+                    Eliminar
+                  </button>
+                )}
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{c.content}</p>
+          </div>
+        ))}
+      </div>
+      <form onSubmit={handleSubmit} className="flex gap-2">
+        <input
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Escribe un comentario..."
+          className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm bg-white dark:bg-gray-800 dark:text-gray-100 outline-none focus:border-blue-500"
+        />
+        <Button type="submit" loading={createComment.isPending} className="shrink-0">
+          Enviar
+        </Button>
+      </form>
+    </div>
+  );
+}
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: project } = useProject(id!);
   const [filters, setFilters] = useState({ search: "", priority: "" });
-  const { data: tasks = [] } = useTasks(id!, filters);
+  const { data: serverTasks = [] } = useTasks(id!, filters);
+  const [localTasks, setLocalTasks] = useState<Task[]>([]);
   const createTask = useCreateTask(id!);
   const updateTask = useUpdateTask(id!);
   const deleteTask = useDeleteTask(id!);
@@ -40,23 +102,36 @@ export default function ProjectDetailPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
-    resolver: zodResolver(schema),
+  useEffect(() => {
+    setLocalTasks(serverTasks);
+  }, [serverTasks]);
+
+  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<TaskFormData>({
+    resolver: zodResolver(taskSchema),
   });
 
-  const tasksByStatus = (status: TaskStatus) => tasks.filter((t) => t.status === status);
+  const tasksByStatus = (status: TaskStatus) => localTasks.filter((t) => t.status === status);
 
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
     const taskId = result.draggableId;
     const newStatus = result.destination.droppableId as TaskStatus;
-    const task = tasks.find((t) => t.id === taskId);
-    if (task && task.status !== newStatus) {
-      updateTask.mutate({ id: taskId, status: newStatus });
-    }
+    const task = localTasks.find((t) => t.id === taskId);
+    if (!task || task.status === newStatus) return;
+
+    setLocalTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
+    );
+
+    api.patch(`/tasks/${taskId}`, { status: newStatus })
+      .then(() => toast.success("Tarea actualizada"))
+      .catch(() => {
+        setLocalTasks(serverTasks);
+        toast.error("Error al actualizar tarea");
+      });
   };
 
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = async (data: TaskFormData) => {
     await createTask.mutateAsync(data);
     reset();
     setModalOpen(false);
@@ -133,10 +208,7 @@ export default function ProjectDetailPage() {
                               </p>
                             )}
                             <div className="flex gap-1 mt-1">
-                              <button
-                                onClick={() => setSelectedTask(task)}
-                                className="text-xs text-blue-500 hover:text-blue-700"
-                              >
+                              <button onClick={() => setSelectedTask(task)} className="text-xs text-blue-500 hover:text-blue-700">
                                 Ver
                               </button>
                               <button
@@ -211,9 +283,8 @@ export default function ProjectDetailPage() {
                 Vence: {new Date(selectedTask.due_date).toLocaleDateString()}
               </p>
             )}
-            <Button variant="secondary" onClick={() => setSelectedTask(null)} className="mt-2">
-              Cerrar
-            </Button>
+            <hr className="border-gray-200 dark:border-gray-700" />
+            <TaskComments taskId={selectedTask.id} />
           </div>
         )}
       </Modal>

@@ -1,11 +1,29 @@
 import { Router } from "express";
-import { authenticate } from "../../middleware/auth";
+import { authenticate, AuthRequest } from "../../middleware/auth";
 import { validate } from "../../middleware/validate";
 import { auditLog } from "../../middleware/auditLog";
 import { createTaskSchema, updateTaskSchema } from "./tasks.schemas";
 import * as tasksController from "./tasks.controller";
 
 const router = Router({ mergeParams: true });
+
+/**
+ * @swagger
+ * /tasks/all:
+ *   get:
+ *     summary: Obtener todas las tareas del usuario
+ *     tags: [Tasks]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de todas las tareas
+ */
+router.get("/all", authenticate, async (req: AuthRequest, res) => {
+  const { findAllByUser } = await import("./tasks.repository");
+  const tasks = await findAllByUser(req.user!.id, req.user!.role);
+  res.json(tasks);
+});
 
 /**
  * @swagger
