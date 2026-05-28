@@ -291,16 +291,18 @@ export default function ProjectDetailPage() {
         <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="flex flex-col gap-4">
           <Input label="Título" {...editForm.register("title")} error={editForm.formState.errors.title?.message} />
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Descripción</label>
+            <label htmlFor="edit-description" className="text-sm font-medium text-gray-700 dark:text-gray-300">Descripción</label>
             <textarea
+              id="edit-description"
               {...editForm.register("description")}
               rows={3}
               className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm bg-white dark:bg-gray-800 dark:text-gray-100 outline-none focus:border-blue-500 resize-none"
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Prioridad</label>
+            <label htmlFor="edit-priority" className="text-sm font-medium text-gray-700 dark:text-gray-300">Prioridad</label>
             <select
+              id="edit-priority"
               {...editForm.register("priority")}
               className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm bg-white dark:bg-gray-800 dark:text-gray-100 outline-none focus:border-blue-500"
             >

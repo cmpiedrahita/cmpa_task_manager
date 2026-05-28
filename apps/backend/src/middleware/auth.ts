@@ -18,7 +18,7 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
     return;
   }
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET!) as AuthUser;
+    const payload = jwt.verify(token, process.env.JWT_SECRET!) as unknown as AuthUser;
     req.authUser = payload;
     next();
   } catch {

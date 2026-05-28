@@ -121,8 +121,9 @@ export default function ProjectsPage() {
         <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="flex flex-col gap-4">
           <Input label="Nombre" {...createForm.register("name")} error={createForm.formState.errors.name?.message} />
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Descripción</label>
+            <label htmlFor="create-description" className="text-sm font-medium text-gray-700 dark:text-gray-300">Descripción</label>
             <textarea
+              id="create-description"
               {...createForm.register("description")}
               rows={3}
               className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm bg-white dark:bg-gray-800 dark:text-gray-100 outline-none focus:border-blue-500 resize-none"
@@ -139,16 +140,18 @@ export default function ProjectsPage() {
         <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="flex flex-col gap-4">
           <Input label="Nombre" {...editForm.register("name")} error={editForm.formState.errors.name?.message} />
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Descripción</label>
+            <label htmlFor="edit-description" className="text-sm font-medium text-gray-700 dark:text-gray-300">Descripción</label>
             <textarea
+              id="edit-description"
               {...editForm.register("description")}
               rows={3}
               className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm bg-white dark:bg-gray-800 dark:text-gray-100 outline-none focus:border-blue-500 resize-none"
             />
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Estado</label>
+            <label htmlFor="edit-status" className="text-sm font-medium text-gray-700 dark:text-gray-300">Estado</label>
             <select
+              id="edit-status"
               {...editForm.register("status")}
               className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm bg-white dark:bg-gray-800 dark:text-gray-100 outline-none focus:border-blue-500"
             >
