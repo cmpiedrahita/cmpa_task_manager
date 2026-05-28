@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useProject } from "../hooks/useProjects";
-import { useTasks, useCreateTask, useUpdateTask, useDeleteTask } from "../hooks/useTasks";
+import { useTasks, useCreateTask, useDeleteTask } from "../hooks/useTasks";
 import { useComments, useCreateComment, useDeleteComment } from "../hooks/useComments";
 import { useAuthStore } from "../store/authStore";
 import { Task, TaskStatus } from "../types";
@@ -96,7 +96,6 @@ export default function ProjectDetailPage() {
   const { data: serverTasks = [] } = useTasks(id!, filters);
   const [localTasks, setLocalTasks] = useState<Task[]>([]);
   const createTask = useCreateTask(id!);
-  const updateTask = useUpdateTask(id!);
   const deleteTask = useDeleteTask(id!);
 
   const [modalOpen, setModalOpen] = useState(false);
