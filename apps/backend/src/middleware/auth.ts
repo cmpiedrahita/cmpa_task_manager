@@ -18,8 +18,8 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
     return;
   }
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET!) as unknown as AuthUser;
-    req.authUser = payload;
+    const payload = jwt.verify(token, process.env.JWT_SECRET!);
+    req.authUser = payload as AuthUser;
     next();
   } catch {
     res.status(401).json({ error: "Token inválido o expirado" });
