@@ -39,11 +39,21 @@ export const useUpdateTask = (projectId: string) => {
   return useMutation({
     mutationFn: ({ id, ...data }: Partial<Task> & { id: string }) =>
       api.patch(`/tasks/${id}`, data).then((r) => r.data),
+    onMutate: async ({ id, ...data }) => {
+      await qc.cancelQueries({ queryKey: ["tasks", projectId] });
+      const snapshots = qc.getQueriesData<Task[]>({ queryKey: ["tasks", projectId] });
+      qc.setQueriesData<Task[]>({ queryKey: ["tasks", projectId] }, (old = []) =>
+        old.map((t) => (t.id === id ? { ...t, ...data } : t))
+      );
+      return { snapshots };
+    },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["tasks", projectId] });
       toast.success("Tarea actualizada");
     },
-    onError: () => toast.error("Error al actualizar tarea"),
+    onError: (_err, _vars, context) => {
+      context?.snapshots?.forEach(([key, data]) => qc.setQueryData(key, data));
+      toast.error("Error al actualizar tarea");
+    },
   });
 };
 

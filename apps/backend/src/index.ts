@@ -8,6 +8,7 @@ import swaggerUi from "swagger-ui-express";
 import authRoutes from "./modules/auth/auth.routes";
 import projectsRoutes from "./modules/projects/projects.routes";
 import tasksRoutes from "./modules/tasks/tasks.routes";
+import commentsRoutes from "./modules/comments/comments.routes";
 
 dotenv.config({ path: "../../.env" });
 
@@ -40,6 +41,8 @@ app.use("/api/auth", authRoutes);
 app.use("/api/projects", projectsRoutes);
 app.use("/api/projects/:projectId/tasks", tasksRoutes);
 app.use("/api/tasks", tasksRoutes);
+app.use("/api/tasks/:taskId/comments", commentsRoutes);
+app.use("/api/comments", commentsRoutes);
 
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });

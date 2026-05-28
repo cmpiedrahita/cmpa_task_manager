@@ -7,6 +7,15 @@ interface TaskFilters {
   search?: string;
 }
 
+export const findAllByUser = (userId: string, role: string) => {
+  const query = db("tasks")
+    .select("tasks.*", "users.name as assignee_name")
+    .leftJoin("users", "tasks.assignee_id", "users.id")
+    .join("projects", "tasks.project_id", "projects.id");
+  if (role !== "admin") query.where("projects.owner_id", userId);
+  return query.orderBy("tasks.created_at", "desc");
+};
+
 export const findByProject = (projectId: string, filters: TaskFilters = {}) => {
   const query = db("tasks")
     .select("tasks.*", "users.name as assignee_name")

@@ -1,7 +1,8 @@
 import { useProjects } from "../hooks/useProjects";
-import { useTasks } from "../hooks/useTasks";
+import { useQuery } from "@tanstack/react-query";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { Task } from "../types";
+import api from "../lib/axios";
 
 const STATUS_COLORS: Record<string, string> = {
   "Por hacer": "#6b7280",
@@ -17,14 +18,17 @@ const PRIORITY_COLORS: Record<string, string> = {
   "Crítica": "#ef4444",
 };
 
-function useAllTasks(projectIds: string[]) {
-  const results = projectIds.map((id) => useTasks(id));
-  return results.flatMap((r) => r.data ?? []);
-}
+const useAllTasks = () =>
+  useQuery<Task[]>({
+    queryKey: ["tasks", "all"],
+    queryFn: () => api.get("/tasks/all").then((r) => r.data),
+  });
 
 export default function DashboardPage() {
   const { data: projects = [] } = useProjects();
-  const allTasks: Task[] = useAllTasks(projects.map((p) => p.id));
+  const { data: allTasks = [], isLoading } = useAllTasks();
+
+  if (isLoading) return <div className="text-center py-20 text-gray-500">Cargando dashboard...</div>;
 
   const statusData = [
     { name: "Por hacer", value: allTasks.filter((t) => t.status === "todo").length },
@@ -51,9 +55,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
-      </div>
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
