@@ -80,12 +80,6 @@ jobs:
           name: coverage
           path: apps/backend/coverage
 
-      - name: Download frontend coverage report
-        uses: actions/download-artifact@v4
-        with:
-          name: coverage-frontend
-          path: apps/frontend/coverage
-
       - name: SonarCloud Scan
         uses: SonarSource/sonarcloud-github-action@master
         env:
@@ -113,14 +107,7 @@ jobs:
         working-directory: apps/frontend
         env:
           VITE_API_URL: http://localhost:3000/api
-          NODE_OPTIONS: --max-old-space-size=512
-        run: npm run test:coverage
-
-      - name: Upload frontend coverage
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-frontend
-          path: apps/frontend/coverage/lcov.info
+        run: npm test
 
       - name: Build frontend
         working-directory: apps/frontend
