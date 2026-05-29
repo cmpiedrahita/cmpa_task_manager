@@ -1,8 +1,14 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
+export interface AuthUser {
+  id: string;
+  email: string;
+  role: string;
+}
+
 export interface AuthRequest extends Request {
-  user?: { id: string; email: string; role: string };
+  authUser?: AuthUser;
 }
 
 export const authenticate = (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -12,12 +18,12 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
     return;
   }
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET!) as {
-      id: string;
-      email: string;
-      role: string;
-    };
-    req.user = payload;
+    const payload = jwt.verify(token, process.env.JWT_SECRET ?? "");
+    if (typeof payload === "string") {
+      res.status(401).json({ error: "Token inválido o expirado" });
+      return;
+    }
+    req.authUser = { id: payload.id, email: payload.email, role: payload.role };
     next();
   } catch {
     res.status(401).json({ error: "Token inválido o expirado" });
@@ -25,7 +31,7 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
 };
 
 export const requireAdmin = (req: AuthRequest, res: Response, next: NextFunction) => {
-  if (req.user?.role !== "admin") {
+  if (req.authUser?.role !== "admin") {
     res.status(403).json({ error: "Acceso denegado" });
     return;
   }

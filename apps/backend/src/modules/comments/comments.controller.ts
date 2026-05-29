@@ -16,14 +16,14 @@ export const getByTask = async (req: AuthRequest, res: Response) => {
 
 export const create = async (req: AuthRequest, res: Response) => {
   try {
-    const comment = await commentsService.create(req.params.taskId, req.user!.id, req.body.content);
+    const comment = await commentsService.create(req.params.taskId, req.authUser!.id, req.body.content);
     res.status(201).json(comment);
   } catch (e) { handleError(e, res); }
 };
 
 export const remove = async (req: AuthRequest, res: Response) => {
   try {
-    await commentsService.remove(req.params.id, req.user!.id, req.user!.role);
+    await commentsService.remove(req.params.id, req.authUser!.id, req.authUser!.role);
     res.status(204).send();
   } catch (e) { handleError(e, res); }
 };

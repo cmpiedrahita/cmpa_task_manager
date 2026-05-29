@@ -33,5 +33,6 @@ export const refresh = async (req: Request, res: Response) => {
 };
 
 export const me = async (req: Request, res: Response) => {
-  res.json((req as unknown as { user: unknown }).user);
+  const authReq = req as import("../../middleware/auth").AuthRequest;
+  res.json(authReq.authUser);
 };

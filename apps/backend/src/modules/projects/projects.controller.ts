@@ -10,7 +10,7 @@ const handleError = (e: unknown, res: Response) => {
 };
 
 export const getAll = async (req: AuthRequest, res: Response) => {
-  const projects = await projectsService.getAll(req.user!.id, req.user!.role);
+  const projects = await projectsService.getAll(req.authUser!.id, req.authUser!.role);
   res.json(projects);
 };
 
@@ -23,21 +23,21 @@ export const getById = async (req: AuthRequest, res: Response) => {
 
 export const create = async (req: AuthRequest, res: Response) => {
   try {
-    const project = await projectsService.create(req.body, req.user!.id);
+    const project = await projectsService.create(req.body, req.authUser!.id);
     res.status(201).json(project);
   } catch (e) { handleError(e, res); }
 };
 
 export const update = async (req: AuthRequest, res: Response) => {
   try {
-    const project = await projectsService.update(req.params.id, req.body, req.user!.id, req.user!.role);
+    const project = await projectsService.update(req.params.id, req.body, req.authUser!.id, req.authUser!.role);
     res.json(project);
   } catch (e) { handleError(e, res); }
 };
 
 export const remove = async (req: AuthRequest, res: Response) => {
   try {
-    await projectsService.remove(req.params.id, req.user!.id, req.user!.role);
+    await projectsService.remove(req.params.id, req.authUser!.id, req.authUser!.role);
     res.status(204).send();
   } catch (e) { handleError(e, res); }
 };
