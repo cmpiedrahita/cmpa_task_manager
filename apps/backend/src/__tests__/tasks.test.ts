@@ -101,9 +101,24 @@ describe("PATCH /api/tasks/:id", () => {
       .send({ status: "done" });
     expect(res.status).toBe(401);
   });
+
+  it("retorna 404 si la tarea no existe", async () => {
+    const res = await request(app)
+      .patch("/api/tasks/00000000-0000-0000-0000-000000000000")
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ status: "done" });
+    expect(res.status).toBe(404);
+  });
 });
 
 describe("DELETE /api/tasks/:id", () => {
+  it("retorna 404 si la tarea no existe", async () => {
+    const res = await request(app)
+      .delete("/api/tasks/00000000-0000-0000-0000-000000000000")
+      .set("Authorization", `Bearer ${accessToken}`);
+    expect(res.status).toBe(404);
+  });
+
   it("elimina la tarea", async () => {
     const res = await request(app)
       .delete(`/api/tasks/${taskId}`)
