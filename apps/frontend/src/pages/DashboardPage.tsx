@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { Task } from "../types";
 import api from "../lib/axios";
+import Button from "../components/ui/Button";
+import jsPDF from "jspdf";
 
 const STATUS_COLORS: Record<string, string> = {
   "Por hacer": "#6b7280",
@@ -53,9 +55,55 @@ export default function DashboardPage() {
     ? Math.round((allTasks.filter((t) => t.status === "done").length / allTasks.length) * 100)
     : 0;
 
+  const exportPDF = () => {
+    const doc = new jsPDF();
+    const date = new Date().toLocaleDateString("es-CO");
+
+    doc.setFontSize(18);
+    doc.text("Reporte de Gestión de Tareas", 14, 20);
+    doc.setFontSize(10);
+    doc.setTextColor(120);
+    doc.text(`Generado el ${date}`, 14, 28);
+
+    doc.setTextColor(0);
+    doc.setFontSize(13);
+    doc.text("Resumen general", 14, 42);
+
+    doc.setFontSize(11);
+    const stats = [
+      ["Proyectos activos", String(projects.length)],
+      ["Tareas totales", String(allTasks.length)],
+      ["Tareas completadas", String(allTasks.filter((t) => t.status === "done").length)],
+      ["Tasa de completado", `${completionRate}%`],
+    ];
+    stats.forEach(([label, value], i) => {
+      doc.text(`${label}: ${value}`, 14, 52 + i * 8);
+    });
+
+    doc.setFontSize(13);
+    doc.text("Tareas por estado", 14, 96);
+    doc.setFontSize(11);
+    statusData.forEach((s, i) => doc.text(`${s.name}: ${s.value}`, 14, 106 + i * 8));
+
+    doc.setFontSize(13);
+    doc.text("Tareas por prioridad", 14, 146);
+    doc.setFontSize(11);
+    priorityData.forEach((p, i) => doc.text(`${p.name}: ${p.value}`, 14, 156 + i * 8));
+
+    doc.setFontSize(13);
+    doc.text("Tareas por proyecto", 14, 196);
+    doc.setFontSize(11);
+    projectData.forEach((p, i) => doc.text(`${p.name}: ${p.tareas} tarea(s)`, 14, 206 + i * 8));
+
+    doc.save(`reporte-tareas-${date}.pdf`);
+  };
+
   return (
     <div className="flex flex-col gap-8">
-      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+        <Button onClick={exportPDF}>Exportar PDF</Button>
+      </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
