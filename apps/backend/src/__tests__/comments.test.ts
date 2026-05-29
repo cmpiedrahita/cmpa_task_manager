@@ -79,6 +79,13 @@ describe("GET /api/tasks/:taskId/comments", () => {
 });
 
 describe("DELETE /api/tasks/:taskId/comments/:id", () => {
+  it("retorna 404 si el comentario no existe", async () => {
+    const res = await request(app)
+      .delete(`/api/tasks/${taskId}/comments/00000000-0000-0000-0000-000000000000`)
+      .set("Authorization", `Bearer ${accessToken}`);
+    expect(res.status).toBe(404);
+  });
+
   it("elimina el comentario", async () => {
     const res = await request(app)
       .delete(`/api/tasks/${taskId}/comments/${commentId}`)
