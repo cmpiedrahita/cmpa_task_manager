@@ -5,12 +5,12 @@ import db from "../../db";
 const signTokens = (user: { id: string; email: string; role: string }) => {
   const accessToken = jwt.sign(
     { id: user.id, email: user.email, role: user.role },
-    process.env.JWT_SECRET!,
+    process.env.JWT_SECRET ?? "",
     { expiresIn: (process.env.JWT_EXPIRES_IN || "15m") as jwt.SignOptions["expiresIn"] }
   );
   const refreshToken = jwt.sign(
     { id: user.id },
-    process.env.JWT_REFRESH_SECRET!,
+    process.env.JWT_REFRESH_SECRET ?? "",
     { expiresIn: (process.env.JWT_REFRESH_EXPIRES_IN || "7d") as jwt.SignOptions["expiresIn"] }
   );
   return { accessToken, refreshToken };
@@ -40,7 +40,7 @@ export const login = async (email: string, password: string) => {
 };
 
 export const refresh = async (token: string) => {
-  const payload = jwt.verify(token, process.env.JWT_REFRESH_SECRET!) as { id: string };
+  const payload = jwt.verify(token, process.env.JWT_REFRESH_SECRET ?? "") as { id: string };
   const user = await db("users").where({ id: payload.id }).first();
   if (!user) throw new Error("USER_NOT_FOUND");
 

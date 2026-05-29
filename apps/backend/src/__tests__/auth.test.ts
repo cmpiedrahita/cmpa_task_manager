@@ -83,6 +83,21 @@ describe("GET /api/auth/me", () => {
     const res = await request(app).get("/api/auth/me");
     expect(res.status).toBe(401);
   });
+
+  it("retorna 401 con token inválido", async () => {
+    const res = await request(app)
+      .get("/api/auth/me")
+      .set("Authorization", "Bearer tokeninvalido");
+    expect(res.status).toBe(401);
+  });
+});
+
+describe("GET /api/health", () => {
+  it("retorna status ok", async () => {
+    const res = await request(app).get("/api/health");
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe("ok");
+  });
 });
 
 describe("POST /api/auth/refresh", () => {

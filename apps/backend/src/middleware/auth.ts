@@ -18,7 +18,7 @@ export const authenticate = (req: AuthRequest, res: Response, next: NextFunction
     return;
   }
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET!);
+    const payload = jwt.verify(token, process.env.JWT_SECRET ?? "");
     if (typeof payload === "string") {
       res.status(401).json({ error: "Token inválido o expirado" });
       return;
