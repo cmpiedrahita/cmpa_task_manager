@@ -7,11 +7,16 @@ export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
   const [dark, setDark] = useState(() => localStorage.getItem("theme") === "dark");
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", dark);
     localStorage.setItem("theme", dark ? "dark" : "light");
   }, [dark]);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [location.pathname]);
 
   const handleLogout = () => {
     logout();
@@ -38,11 +43,13 @@ export default function Navbar() {
     <nav className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Link to="/" className="font-bold text-gray-900 dark:text-white mr-4 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+          <Link to="/" className="font-bold text-gray-900 dark:text-white mr-2 hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
             CMPA
           </Link>
-          {navLink("/projects", "Proyectos")}
-          {navLink("/dashboard", "Dashboard")}
+          <div className="hidden sm:flex items-center gap-2">
+            {navLink("/projects", "Proyectos")}
+            {navLink("/dashboard", "Dashboard")}
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -54,7 +61,7 @@ export default function Navbar() {
             {dark ? "☀" : "☾"}
           </button>
 
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
+          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50">
             <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
               {user?.name?.charAt(0).toUpperCase()}
             </div>
@@ -65,12 +72,39 @@ export default function Navbar() {
 
           <button
             onClick={handleLogout}
-            className="text-sm px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-800 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+            className="hidden sm:block text-sm px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-800 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+          >
+            Salir
+          </button>
+
+          <button
+            onClick={() => setMenuOpen((o) => !o)}
+            className="sm:hidden w-8 h-8 flex items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+            aria-label="Menú"
+          >
+            {menuOpen ? "✕" : "☰"}
+          </button>
+        </div>
+      </div>
+
+      {menuOpen && (
+        <div className="sm:hidden border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 flex flex-col gap-2">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-7 h-7 rounded-full bg-blue-600 flex items-center justify-center text-white text-xs font-bold">
+              {user?.name?.charAt(0).toUpperCase()}
+            </div>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300 truncate">{user?.name}</span>
+          </div>
+          {navLink("/projects", "Proyectos")}
+          {navLink("/dashboard", "Dashboard")}
+          <button
+            onClick={handleLogout}
+            className="text-sm px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-800 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors text-left"
           >
             Salir
           </button>
         </div>
-      </div>
+      )}
     </nav>
   );
 }
