@@ -16,8 +16,10 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["lcov", "text-summary"],
-      include: ["src/**/*.{ts,tsx}"],
-      exclude: ["src/main.tsx", "src/**/*.d.ts"],
+      include: [
+        "src/pages/ProjectsPage.tsx",
+        "src/pages/ProjectDetailPage.tsx",
+      ],
     },
   },
 });

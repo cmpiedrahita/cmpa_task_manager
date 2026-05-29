@@ -113,6 +113,7 @@ jobs:
         working-directory: apps/frontend
         env:
           VITE_API_URL: http://localhost:3000/api
+          NODE_OPTIONS: --max-old-space-size=512
         run: npm run test:coverage
 
       - name: Upload frontend coverage
