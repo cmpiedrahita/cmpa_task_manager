@@ -5,6 +5,7 @@ import { Task } from "../types";
 import api from "../lib/axios";
 import Button from "../components/ui/Button";
 import jsPDF from "jspdf";
+import { DashboardStatSkeleton } from "../components/ui/Skeleton";
 
 const STATUS_COLORS: Record<string, string> = {
   "Por hacer": "#6b7280",
@@ -30,7 +31,14 @@ export default function DashboardPage() {
   const { data: projects = [] } = useProjects();
   const { data: allTasks = [], isLoading } = useAllTasks();
 
-  if (isLoading) return <div className="text-center py-20 text-gray-500">Cargando dashboard...</div>;
+  if (isLoading) return (
+    <div className="flex flex-col gap-8">
+      <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        {Array.from({ length: 4 }).map((_, i) => <DashboardStatSkeleton key={i} />)}
+      </div>
+    </div>
+  );
 
   const statusData = [
     { name: "Por hacer", value: allTasks.filter((t) => t.status === "todo").length },

@@ -13,6 +13,8 @@ import { StatusBadge, PriorityBadge } from "../components/ui/Badge";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import Modal from "../components/ui/Modal";
+import ConfirmModal from "../components/ui/ConfirmModal";
+import { TaskCardSkeleton } from "../components/ui/Skeleton";
 import toast from "react-hot-toast";
 import api from "../lib/axios";
 
@@ -24,10 +26,13 @@ const COLUMNS: { id: TaskStatus; label: string }[] = [
 ];
 
 const taskSchema = z.object({
-  title: z.string().min(2, "Mínimo 2 caracteres"),
+  title: z.string().min(1, "El título es obligatorio").min(2, "El título debe tener al menos 2 caracteres"),
   description: z.string().optional(),
   priority: z.enum(["low", "medium", "high", "critical"]).optional(),
-  due_date: z.string().optional(),
+  due_date: z.string().optional().refine((val) => {
+    if (!val) return true;
+    return new Date(val) >= new Date(new Date().toISOString().split("T")[0]);
+  }, "La fecha límite no puede ser anterior a hoy"),
 });
 
 type TaskFormData = z.infer<typeof taskSchema>;
@@ -93,7 +98,7 @@ export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: project } = useProject(id!);
   const [filters, setFilters] = useState({ search: "", priority: "" });
-  const { data: serverTasks = [] } = useTasks(id!, filters);
+  const { data: serverTasks = [], isLoading: tasksLoading } = useTasks(id!, filters);
   const [localTasks, setLocalTasks] = useState<Task[]>([]);
   const createTask = useCreateTask(id!);
   const deleteTask = useDeleteTask(id!);
@@ -101,6 +106,7 @@ export default function ProjectDetailPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
 
   const editForm = useForm<TaskFormData>({ resolver: zodResolver(taskSchema) });
 
@@ -116,10 +122,14 @@ export default function ProjectDetailPage() {
 
   const onEditSubmit = async (data: TaskFormData) => {
     if (!editingTask) return;
-    await api.patch(`/tasks/${editingTask.id}`, data);
-    setLocalTasks((prev) => prev.map((t) => t.id === editingTask.id ? { ...t, ...data } : t));
-    setEditingTask(null);
-    toast.success("Tarea actualizada");
+    try {
+      await api.patch(`/tasks/${editingTask.id}`, data);
+      setLocalTasks((prev) => prev.map((t) => t.id === editingTask.id ? { ...t, ...data } : t));
+      setEditingTask(null);
+      toast.success("Tarea actualizada");
+    } catch {
+      toast.error("No se pudo actualizar la tarea. Intenta de nuevo.");
+    }
   };
 
   useEffect(() => {
@@ -152,9 +162,13 @@ export default function ProjectDetailPage() {
   };
 
   const onSubmit = async (data: TaskFormData) => {
-    await createTask.mutateAsync(data);
-    reset();
-    setModalOpen(false);
+    try {
+      await createTask.mutateAsync(data);
+      reset();
+      setModalOpen(false);
+    } catch {
+      toast.error("No se pudo crear la tarea. Intenta de nuevo.");
+    }
   };
 
   return (
@@ -206,16 +220,25 @@ export default function ProjectDetailPage() {
                     {...provided.droppableProps}
                     className={`flex flex-col gap-2 flex-1 rounded-lg transition-colors ${snapshot.isDraggingOver ? "bg-blue-50 dark:bg-blue-900/20" : ""}`}
                   >
-                    {tasksByStatus(col.id).map((task, index) => (
+                    {tasksLoading
+                      ? Array.from({ length: 2 }).map((_, i) => <TaskCardSkeleton key={i} />)
+                      : tasksByStatus(col.id).map((task, index) => (
                       <Draggable key={task.id} draggableId={task.id} index={index}>
-                        {(provided, snapshot) => (
+                        {(provided, snapshot) => {
+                          const isOverdue = task.due_date && task.status !== "done" && new Date(task.due_date) < new Date();
+                          return (
                           <div
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
-                            className={`bg-white dark:bg-gray-700 rounded-lg p-3 shadow-sm flex flex-col gap-2 cursor-grab active:cursor-grabbing ${snapshot.isDragging ? "shadow-lg rotate-1" : ""}`}
+                            className={`bg-white dark:bg-gray-700 rounded-lg p-3 shadow-sm flex flex-col gap-2 cursor-grab active:cursor-grabbing ${
+                              snapshot.isDragging ? "shadow-lg rotate-1" : ""} ${
+                              isOverdue ? "border border-red-400 dark:border-red-500" : ""}`}
                           >
-                            <p className="text-sm font-medium text-gray-900 dark:text-white">{task.title}</p>
+                            <div className="flex items-start justify-between gap-1">
+                              <p className="text-sm font-medium text-gray-900 dark:text-white">{task.title}</p>
+                              {isOverdue && <span title="Tarea vencida">⚠️</span>}
+                            </div>
                             <div className="flex items-center gap-1 flex-wrap">
                               <PriorityBadge priority={task.priority} />
                             </div>
@@ -223,7 +246,7 @@ export default function ProjectDetailPage() {
                               <p className="text-xs text-gray-400">{task.assignee_name}</p>
                             )}
                             {task.due_date && (
-                              <p className="text-xs text-gray-400">
+                              <p className={`text-xs ${isOverdue ? "text-red-500 font-medium" : "text-gray-400"}`}>
                                 Vence: {new Date(task.due_date).toLocaleDateString()}
                               </p>
                             )}
@@ -235,14 +258,15 @@ export default function ProjectDetailPage() {
                                 Editar
                               </button>
                               <button
-                                onClick={() => { if (confirm("¿Eliminar tarea?")) deleteTask.mutate(task.id); }}
+                                onClick={() => setDeletingTaskId(task.id)}
                                 className="text-xs px-2 py-1 rounded-md border border-red-200 dark:border-red-800 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
                               >
                                 Eliminar
                               </button>
                             </div>
                           </div>
-                        )}
+                          );
+                        }}
                       </Draggable>
                     ))}
                     {provided.placeholder}
@@ -277,7 +301,7 @@ export default function ProjectDetailPage() {
               <option value="critical">Crítica</option>
             </select>
           </div>
-          <Input label="Fecha límite" type="date" {...register("due_date")} />
+          <Input label="Fecha límite" type="date" min={new Date().toISOString().split("T")[0]} {...register("due_date")} error={errors.due_date?.message} />
           <div className="flex justify-end gap-2 mt-2">
             <Button variant="secondary" type="button" onClick={() => { setModalOpen(false); reset(); }}>
               Cancelar
@@ -312,7 +336,7 @@ export default function ProjectDetailPage() {
               <option value="critical">Crítica</option>
             </select>
           </div>
-          <Input label="Fecha límite" type="date" {...editForm.register("due_date")} />
+          <Input label="Fecha límite" type="date" min={new Date().toISOString().split("T")[0]} {...editForm.register("due_date")} error={editForm.formState.errors.due_date?.message} />
           <div className="flex justify-end gap-2 mt-2">
             <Button variant="secondary" type="button" onClick={() => setEditingTask(null)}>Cancelar</Button>
             <Button type="submit" loading={editForm.formState.isSubmitting}>Guardar</Button>
@@ -344,6 +368,13 @@ export default function ProjectDetailPage() {
           </div>
         )}
       </Modal>
+
+      <ConfirmModal
+        open={!!deletingTaskId}
+        onClose={() => setDeletingTaskId(null)}
+        onConfirm={() => { deleteTask.mutate(deletingTaskId!); setDeletingTaskId(null); }}
+        message="¿Eliminar esta tarea? Esta acción no se puede deshacer."
+      />
     </div>
   );
 }

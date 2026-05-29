@@ -8,10 +8,13 @@ import { useAuthStore } from "../store/authStore";
 import Button from "../components/ui/Button";
 import Input from "../components/ui/Input";
 import Modal from "../components/ui/Modal";
+import ConfirmModal from "../components/ui/ConfirmModal";
 import { Project } from "../types";
+import { ProjectCardSkeleton } from "../components/ui/Skeleton";
+
 
 const schema = z.object({
-  name: z.string().min(2, "Mínimo 2 caracteres"),
+  name: z.string().min(1, "El nombre es obligatorio").min(2, "El nombre debe tener al menos 2 caracteres"),
   description: z.string().optional(),
   status: z.enum(["active", "archived"]).optional(),
 });
@@ -28,6 +31,7 @@ export default function ProjectsPage() {
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
 
   const createForm = useForm<FormData>({ resolver: zodResolver(schema) });
   const editForm = useForm<FormData>({ resolver: zodResolver(schema) });
@@ -52,7 +56,16 @@ export default function ProjectsPage() {
   const canModify = (project: Project) =>
     user?.role === "admin" || project.owner_id === user?.id;
 
-  if (isLoading) return <div className="text-center py-20 text-gray-500">Cargando proyectos...</div>;
+  if (isLoading) return (
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Proyectos</h1>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {Array.from({ length: 6 }).map((_, i) => <ProjectCardSkeleton key={i} />)}
+      </div>
+    </div>
+  );
 
   return (
     <div>
@@ -105,7 +118,7 @@ export default function ProjectsPage() {
                     <Button
                       variant="danger"
                       className="text-xs px-2 py-1"
-                      onClick={() => { if (confirm("¿Eliminar este proyecto?")) deleteProject.mutate(project.id); }}
+                      onClick={() => setDeletingProjectId(project.id)}
                     >
                       Eliminar
                     </Button>
@@ -165,6 +178,13 @@ export default function ProjectsPage() {
           </div>
         </form>
       </Modal>
+
+      <ConfirmModal
+        open={!!deletingProjectId}
+        onClose={() => setDeletingProjectId(null)}
+        onConfirm={() => { deleteProject.mutate(deletingProjectId!); setDeletingProjectId(null); }}
+        message="¿Eliminar este proyecto? Se eliminarán todas sus tareas y comentarios."
+      />
     </div>
   );
 }
