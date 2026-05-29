@@ -85,6 +85,22 @@ describe("PATCH /api/tasks/:id", () => {
     expect(res.status).toBe(200);
     expect(res.body.status).toBe("in_progress");
   });
+
+  it("actualiza la prioridad de la tarea", async () => {
+    const res = await request(app)
+      .patch(`/api/tasks/${taskId}`)
+      .set("Authorization", `Bearer ${accessToken}`)
+      .send({ priority: "critical" });
+    expect(res.status).toBe(200);
+    expect(res.body.priority).toBe("critical");
+  });
+
+  it("retorna 401 sin token", async () => {
+    const res = await request(app)
+      .patch(`/api/tasks/${taskId}`)
+      .send({ status: "done" });
+    expect(res.status).toBe(401);
+  });
 });
 
 describe("DELETE /api/tasks/:id", () => {
@@ -93,5 +109,25 @@ describe("DELETE /api/tasks/:id", () => {
       .delete(`/api/tasks/${taskId}`)
       .set("Authorization", `Bearer ${accessToken}`);
     expect(res.status).toBe(204);
+  });
+
+  it("retorna 401 sin token", async () => {
+    const res = await request(app).delete(`/api/tasks/${taskId}`);
+    expect(res.status).toBe(401);
+  });
+});
+
+describe("GET /api/tasks/all", () => {
+  it("retorna todas las tareas del usuario", async () => {
+    const res = await request(app)
+      .get("/api/tasks/all")
+      .set("Authorization", `Bearer ${accessToken}`);
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body)).toBe(true);
+  });
+
+  it("retorna 401 sin token", async () => {
+    const res = await request(app).get("/api/tasks/all");
+    expect(res.status).toBe(401);
   });
 });

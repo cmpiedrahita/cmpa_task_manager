@@ -55,6 +55,19 @@ describe("POST /api/auth/login", () => {
     });
     expect(res.status).toBe(401);
   });
+
+  it("retorna 401 con email inexistente", async () => {
+    const res = await request(app).post("/api/auth/login").send({
+      email: "noexiste@cmpa.dev",
+      password: "Test1234!",
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it("retorna 400 si falta el email", async () => {
+    const res = await request(app).post("/api/auth/login").send({ password: "Test1234!" });
+    expect(res.status).toBe(400);
+  });
 });
 
 describe("GET /api/auth/me", () => {
