@@ -8,6 +8,7 @@ import { useProject } from "../hooks/useProjects";
 import { useTasks, useCreateTask, useDeleteTask } from "../hooks/useTasks";
 import { useComments, useCreateComment, useDeleteComment } from "../hooks/useComments";
 import { useAuthStore } from "../store/authStore";
+import { useQueryClient } from "@tanstack/react-query";
 import { Task, TaskStatus } from "../types";
 import { StatusBadge, PriorityBadge } from "../components/ui/Badge";
 import Modal from "../components/ui/Modal";
@@ -107,6 +108,7 @@ export default function ProjectDetailPage() {
   const [localTasks, setLocalTasks] = useState<Task[]>([]);
   const createTask = useCreateTask(id!);
   const deleteTask = useDeleteTask(id!);
+  const qc = useQueryClient();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -159,7 +161,10 @@ export default function ProjectDetailPage() {
     );
 
     api.patch(`/tasks/${taskId}`, { status: newStatus })
-      .then(() => toast.success("Tarea actualizada"))
+      .then(() => {
+        toast.success("Tarea actualizada");
+        qc.invalidateQueries({ queryKey: ["tasks", "all"] });
+      })
       .catch(() => {
         setLocalTasks(serverTasks);
         toast.error("Error al actualizar tarea");
