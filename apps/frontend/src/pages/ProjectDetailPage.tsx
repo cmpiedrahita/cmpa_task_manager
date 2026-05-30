@@ -8,21 +8,20 @@ import { useProject } from "../hooks/useProjects";
 import { useTasks, useCreateTask, useDeleteTask } from "../hooks/useTasks";
 import { useComments, useCreateComment, useDeleteComment } from "../hooks/useComments";
 import { useAuthStore } from "../store/authStore";
+import { useQueryClient } from "@tanstack/react-query";
 import { Task, TaskStatus } from "../types";
 import { StatusBadge, PriorityBadge } from "../components/ui/Badge";
-import Button from "../components/ui/Button";
-import Input from "../components/ui/Input";
 import Modal from "../components/ui/Modal";
 import ConfirmModal from "../components/ui/ConfirmModal";
 import { TaskCardSkeleton } from "../components/ui/Skeleton";
 import toast from "react-hot-toast";
 import api from "../lib/axios";
 
-const COLUMNS: { id: TaskStatus; label: string }[] = [
-  { id: "todo", label: "Por hacer" },
-  { id: "in_progress", label: "En progreso" },
-  { id: "in_review", label: "En revisión" },
-  { id: "done", label: "Completada" },
+const COLUMNS: { id: TaskStatus; label: string; color: string }[] = [
+  { id: "todo", label: "Por hacer", color: "text-gray-400 border-gray-500/30" },
+  { id: "in_progress", label: "En progreso", color: "text-blue-400 border-blue-500/30" },
+  { id: "in_review", label: "En revisión", color: "text-amber-400 border-amber-500/30" },
+  { id: "done", label: "Completada", color: "text-emerald-400 border-emerald-500/30" },
 ];
 
 const taskSchema = z.object({
@@ -36,6 +35,9 @@ const taskSchema = z.object({
 });
 
 type TaskFormData = z.infer<typeof taskSchema>;
+
+const inputClass = "px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-600 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/50 transition-all text-sm w-full [&_option]:bg-gray-900 [&_option]:text-white";
+const labelClass = "text-sm font-medium text-gray-300";
 
 function TaskComments({ taskId }: { taskId: string }) {
   const { data: comments = [] } = useComments(taskId);
@@ -53,29 +55,29 @@ function TaskComments({ taskId }: { taskId: string }) {
 
   return (
     <div className="flex flex-col gap-3 mt-2">
-      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+      <h4 className="text-sm font-semibold text-gray-300">
         Comentarios ({comments.length})
       </h4>
       <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
         {comments.length === 0 && (
-          <p className="text-xs text-gray-400">Sin comentarios aún.</p>
+          <p className="text-xs text-gray-500">Sin comentarios aún.</p>
         )}
         {comments.map((c) => (
-          <div key={c.id} className="bg-gray-50 dark:bg-gray-700/50 rounded-lg px-3 py-2">
+          <div key={c.id} className="bg-white/5 border border-white/10 rounded-lg px-3 py-2">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{c.author_name}</span>
+              <span className="text-xs font-medium text-gray-300">{c.author_name}</span>
               <div className="flex items-center gap-2">
-                <span className="text-xs text-gray-400">
+                <span className="text-xs text-gray-500">
                   {new Date(c.created_at).toLocaleDateString()}
                 </span>
                 {(c.author_id === user?.id || user?.role === "admin") && (
-                  <button onClick={() => deleteComment.mutate(c.id)} className="text-xs text-red-400 hover:text-red-600">
+                  <button onClick={() => deleteComment.mutate(c.id)} className="text-xs text-red-400 hover:text-red-300 transition-colors">
                     Eliminar
                   </button>
                 )}
               </div>
             </div>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{c.content}</p>
+            <p className="text-sm text-gray-400 mt-1">{c.content}</p>
           </div>
         ))}
       </div>
@@ -84,11 +86,15 @@ function TaskComments({ taskId }: { taskId: string }) {
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Escribe un comentario..."
-          className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm bg-white dark:bg-gray-800 dark:text-gray-100 outline-none focus:border-blue-500"
+          className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-600 outline-none focus:border-violet-500 transition-all text-sm"
         />
-        <Button type="submit" loading={createComment.isPending} className="shrink-0">
+        <button
+          type="submit"
+          disabled={createComment.isPending}
+          className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white text-sm font-medium transition-all disabled:opacity-50 shrink-0"
+        >
           Enviar
-        </Button>
+        </button>
       </form>
     </div>
   );
@@ -102,6 +108,7 @@ export default function ProjectDetailPage() {
   const [localTasks, setLocalTasks] = useState<Task[]>([]);
   const createTask = useCreateTask(id!);
   const deleteTask = useDeleteTask(id!);
+  const qc = useQueryClient();
 
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -154,7 +161,10 @@ export default function ProjectDetailPage() {
     );
 
     api.patch(`/tasks/${taskId}`, { status: newStatus })
-      .then(() => toast.success("Tarea actualizada"))
+      .then(() => {
+        toast.success("Tarea actualizada");
+        qc.invalidateQueries({ queryKey: ["tasks", "all"] });
+      })
       .catch(() => {
         setLocalTasks(serverTasks);
         toast.error("Error al actualizar tarea");
@@ -173,27 +183,34 @@ export default function ProjectDetailPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-2">
+      {/* Header */}
+      <div className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{project?.name}</h1>
           {project?.description && (
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{project.description}</p>
           )}
         </div>
-        <Button onClick={() => setModalOpen(true)}>Nueva tarea</Button>
+        <button
+          onClick={() => setModalOpen(true)}
+          className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white text-sm font-semibold transition-all shadow-lg shadow-violet-500/20 shrink-0"
+        >
+          + Nueva tarea
+        </button>
       </div>
 
-      <div className="flex gap-3 mb-6 mt-4">
-        <Input
+      {/* Filters */}
+      <div className="flex gap-3 mb-6 flex-wrap">
+        <input
           placeholder="Buscar tareas..."
           value={filters.search}
           onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
-          className="max-w-xs"
+          className="px-4 py-2 rounded-xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 outline-none focus:border-violet-500 transition-all text-sm max-w-xs"
         />
         <select
           value={filters.priority}
           onChange={(e) => setFilters((f) => ({ ...f, priority: e.target.value }))}
-          className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm bg-white dark:bg-gray-800 dark:text-gray-100 outline-none focus:border-blue-500"
+          className="px-4 py-2 rounded-xl bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white outline-none focus:border-violet-500 transition-all text-sm [&_option]:bg-gray-900 [&_option]:text-white"
         >
           <option value="">Todas las prioridades</option>
           <option value="low">Baja</option>
@@ -203,13 +220,14 @@ export default function ProjectDetailPage() {
         </select>
       </div>
 
+      {/* Kanban */}
       <DragDropContext onDragEnd={onDragEnd}>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {COLUMNS.map((col) => (
-            <div key={col.id} className="bg-gray-100 dark:bg-gray-800 rounded-xl p-3 flex flex-col gap-2 min-h-[200px]">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{col.label}</span>
-                <span className="text-xs bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-full px-2 py-0.5">
+            <div key={col.id} className="bg-gray-100 dark:bg-white/5 rounded-2xl border border-gray-200 dark:border-white/10 p-3 flex flex-col gap-2 min-h-[200px]">
+              <div className={`flex items-center justify-between mb-1 pb-2 border-b ${col.color}`}>
+                <span className={`text-sm font-semibold ${col.color.split(" ")[0]}`}>{col.label}</span>
+                <span className="text-xs bg-gray-200 dark:bg-white/10 text-gray-600 dark:text-gray-400 rounded-full px-2 py-0.5">
                   {tasksByStatus(col.id).length}
                 </span>
               </div>
@@ -218,7 +236,7 @@ export default function ProjectDetailPage() {
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className={`flex flex-col gap-2 flex-1 rounded-lg transition-colors ${snapshot.isDraggingOver ? "bg-blue-50 dark:bg-blue-900/20" : ""}`}
+                    className={`flex flex-col gap-2 flex-1 rounded-xl transition-colors ${snapshot.isDraggingOver ? "bg-violet-500/10" : ""}`}
                   >
                     {tasksLoading
                       ? Array.from({ length: 2 }).map((_, i) => <TaskCardSkeleton key={i} />)
@@ -227,44 +245,42 @@ export default function ProjectDetailPage() {
                         {(provided, snapshot) => {
                           const isOverdue = task.due_date && task.status !== "done" && new Date(task.due_date) < new Date();
                           return (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            className={`bg-white dark:bg-gray-700 rounded-lg p-3 shadow-sm flex flex-col gap-2 cursor-grab active:cursor-grabbing ${
-                              snapshot.isDragging ? "shadow-lg rotate-1" : ""} ${
-                              isOverdue ? "border border-red-400 dark:border-red-500" : ""}`}
-                          >
-                            <div className="flex items-start justify-between gap-1">
-                              <p className="text-sm font-medium text-gray-900 dark:text-white">{task.title}</p>
-                              {isOverdue && <span title="Tarea vencida">⚠️</span>}
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              {...provided.dragHandleProps}
+                              className={`bg-white dark:bg-white/5 rounded-xl p-3 flex flex-col gap-2 cursor-grab active:cursor-grabbing border transition-all ${
+                                snapshot.isDragging ? "shadow-xl rotate-1 border-violet-500/50" :
+                                isOverdue ? "border-red-400/60 dark:border-red-500/60" :
+                                "border-gray-200 dark:border-white/10 hover:border-violet-500/30"}`}
+                            >
+                              <div className="flex items-start justify-between gap-1">
+                                <p className="text-sm font-medium text-gray-900 dark:text-white">{task.title}</p>
+                                {isOverdue && <span title="Tarea vencida" className="text-xs shrink-0">⚠️</span>}
+                              </div>
+                              <div className="flex items-center gap-1 flex-wrap">
+                                <PriorityBadge priority={task.priority} />
+                              </div>
+                              {task.assignee_name && (
+                                <p className="text-xs text-gray-400">{task.assignee_name}</p>
+                              )}
+                              {task.due_date && (
+                                <p className={`text-xs ${isOverdue ? "text-red-400 font-medium" : "text-gray-400"}`}>
+                                  Vence: {new Date(task.due_date).toLocaleDateString()}
+                                </p>
+                              )}
+                              <div className="flex gap-1 mt-1">
+                                <button onClick={() => setSelectedTask(task)} className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:border-violet-500/50 hover:text-violet-500 dark:hover:text-violet-400 transition-all">
+                                  Ver
+                                </button>
+                                <button onClick={() => openEdit(task)} className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:border-blue-500/50 hover:text-blue-500 dark:hover:text-blue-400 transition-all">
+                                  Editar
+                                </button>
+                                <button onClick={() => setDeletingTaskId(task.id)} className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:border-red-500/50 hover:text-red-400 transition-all">
+                                  Eliminar
+                                </button>
+                              </div>
                             </div>
-                            <div className="flex items-center gap-1 flex-wrap">
-                              <PriorityBadge priority={task.priority} />
-                            </div>
-                            {task.assignee_name && (
-                              <p className="text-xs text-gray-400">{task.assignee_name}</p>
-                            )}
-                            {task.due_date && (
-                              <p className={`text-xs ${isOverdue ? "text-red-500 font-medium" : "text-gray-400"}`}>
-                                Vence: {new Date(task.due_date).toLocaleDateString()}
-                              </p>
-                            )}
-                            <div className="flex gap-1 mt-1">
-                              <button onClick={() => setSelectedTask(task)} className="text-xs px-2 py-1 rounded-md border border-blue-200 dark:border-blue-700 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors">
-                                Ver
-                              </button>
-                              <button onClick={() => openEdit(task)} className="text-xs px-2 py-1 rounded-md border border-gray-200 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors">
-                                Editar
-                              </button>
-                              <button
-                                onClick={() => setDeletingTaskId(task.id)}
-                                className="text-xs px-2 py-1 rounded-md border border-red-200 dark:border-red-800 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
-                              >
-                                Eliminar
-                              </button>
-                            </div>
-                          </div>
                           );
                         }}
                       </Draggable>
@@ -278,92 +294,101 @@ export default function ProjectDetailPage() {
         </div>
       </DragDropContext>
 
+      {/* Modal nueva tarea */}
       <Modal open={modalOpen} onClose={() => { setModalOpen(false); reset(); }} title="Nueva tarea">
         <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-          <Input label="Título" {...register("title")} error={errors.title?.message} />
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Descripción</label>
-            <textarea
-              {...register("description")}
-              rows={3}
-              className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm bg-white dark:bg-gray-800 dark:text-gray-100 outline-none focus:border-blue-500 resize-none"
-            />
+            <label className={labelClass}>Título</label>
+            <input {...register("title")} placeholder="Título de la tarea" className={inputClass} />
+            {errors.title && <p className="text-xs text-red-400">{errors.title.message}</p>}
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Prioridad</label>
-            <select
-              {...register("priority")}
-              className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm bg-white dark:bg-gray-800 dark:text-gray-100 outline-none focus:border-blue-500"
-            >
+            <label className={labelClass}>Descripción</label>
+            <textarea {...register("description")} rows={3} placeholder="Descripción opcional..." className={`${inputClass} resize-none`} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className={labelClass}>Prioridad</label>
+            <select {...register("priority")} className={inputClass}>
               <option value="low">Baja</option>
               <option value="medium">Media</option>
               <option value="high">Alta</option>
               <option value="critical">Crítica</option>
             </select>
           </div>
-          <Input label="Fecha límite" type="date" min={new Date().toISOString().split("T")[0]} {...register("due_date")} error={errors.due_date?.message} />
+          <div className="flex flex-col gap-1">
+            <label className={labelClass}>Fecha límite</label>
+            <input type="date" min={new Date().toISOString().split("T")[0]} {...register("due_date")} className={inputClass} />
+            {errors.due_date && <p className="text-xs text-red-400">{errors.due_date.message}</p>}
+          </div>
           <div className="flex justify-end gap-2 mt-2">
-            <Button variant="secondary" type="button" onClick={() => { setModalOpen(false); reset(); }}>
+            <button type="button" onClick={() => { setModalOpen(false); reset(); }} className="px-4 py-2 rounded-xl border border-white/10 text-gray-400 hover:text-white hover:border-white/20 text-sm transition-all">
               Cancelar
-            </Button>
-            <Button type="submit" loading={isSubmitting}>Crear</Button>
+            </button>
+            <button type="submit" disabled={isSubmitting} className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white text-sm font-semibold transition-all disabled:opacity-50">
+              {isSubmitting ? "Creando..." : "Crear"}
+            </button>
           </div>
         </form>
       </Modal>
 
+      {/* Modal editar tarea */}
       <Modal open={!!editingTask} onClose={() => setEditingTask(null)} title="Editar tarea">
         <form onSubmit={editForm.handleSubmit(onEditSubmit)} className="flex flex-col gap-4">
-          <Input label="Título" {...editForm.register("title")} error={editForm.formState.errors.title?.message} />
           <div className="flex flex-col gap-1">
-            <label htmlFor="edit-description" className="text-sm font-medium text-gray-700 dark:text-gray-300">Descripción</label>
-            <textarea
-              id="edit-description"
-              {...editForm.register("description")}
-              rows={3}
-              className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm bg-white dark:bg-gray-800 dark:text-gray-100 outline-none focus:border-blue-500 resize-none"
-            />
+            <label className={labelClass}>Título</label>
+            <input {...editForm.register("title")} className={inputClass} />
+            {editForm.formState.errors.title && <p className="text-xs text-red-400">{editForm.formState.errors.title.message}</p>}
           </div>
           <div className="flex flex-col gap-1">
-            <label htmlFor="edit-priority" className="text-sm font-medium text-gray-700 dark:text-gray-300">Prioridad</label>
-            <select
-              id="edit-priority"
-              {...editForm.register("priority")}
-              className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 text-sm bg-white dark:bg-gray-800 dark:text-gray-100 outline-none focus:border-blue-500"
-            >
+            <label htmlFor="edit-description" className={labelClass}>Descripción</label>
+            <textarea id="edit-description" {...editForm.register("description")} rows={3} className={`${inputClass} resize-none`} />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label htmlFor="edit-priority" className={labelClass}>Prioridad</label>
+            <select id="edit-priority" {...editForm.register("priority")} className={inputClass}>
               <option value="low">Baja</option>
               <option value="medium">Media</option>
               <option value="high">Alta</option>
               <option value="critical">Crítica</option>
             </select>
           </div>
-          <Input label="Fecha límite" type="date" min={new Date().toISOString().split("T")[0]} {...editForm.register("due_date")} error={editForm.formState.errors.due_date?.message} />
+          <div className="flex flex-col gap-1">
+            <label className={labelClass}>Fecha límite</label>
+            <input type="date" min={new Date().toISOString().split("T")[0]} {...editForm.register("due_date")} className={inputClass} />
+            {editForm.formState.errors.due_date && <p className="text-xs text-red-400">{editForm.formState.errors.due_date.message}</p>}
+          </div>
           <div className="flex justify-end gap-2 mt-2">
-            <Button variant="secondary" type="button" onClick={() => setEditingTask(null)}>Cancelar</Button>
-            <Button type="submit" loading={editForm.formState.isSubmitting}>Guardar</Button>
+            <button type="button" onClick={() => setEditingTask(null)} className="px-4 py-2 rounded-xl border border-white/10 text-gray-400 hover:text-white hover:border-white/20 text-sm transition-all">
+              Cancelar
+            </button>
+            <button type="submit" disabled={editForm.formState.isSubmitting} className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white text-sm font-semibold transition-all disabled:opacity-50">
+              {editForm.formState.isSubmitting ? "Guardando..." : "Guardar"}
+            </button>
           </div>
         </form>
       </Modal>
 
+      {/* Modal detalle */}
       <Modal open={!!selectedTask} onClose={() => setSelectedTask(null)} title="Detalle de tarea">
         {selectedTask && (
           <div className="flex flex-col gap-3">
-            <h3 className="font-semibold text-gray-900 dark:text-white">{selectedTask.title}</h3>
+            <h3 className="font-semibold text-white">{selectedTask.title}</h3>
             {selectedTask.description && (
-              <p className="text-sm text-gray-600 dark:text-gray-400">{selectedTask.description}</p>
+              <p className="text-sm text-gray-400">{selectedTask.description}</p>
             )}
             <div className="flex gap-2 flex-wrap">
               <StatusBadge status={selectedTask.status} />
               <PriorityBadge priority={selectedTask.priority} />
             </div>
             {selectedTask.assignee_name && (
-              <p className="text-sm text-gray-500">Asignado a: {selectedTask.assignee_name}</p>
+              <p className="text-sm text-gray-400">Asignado a: {selectedTask.assignee_name}</p>
             )}
             {selectedTask.due_date && (
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-400">
                 Vence: {new Date(selectedTask.due_date).toLocaleDateString()}
               </p>
             )}
-            <hr className="border-gray-200 dark:border-gray-700" />
+            <hr className="border-white/10" />
             <TaskComments taskId={selectedTask.id} />
           </div>
         )}
