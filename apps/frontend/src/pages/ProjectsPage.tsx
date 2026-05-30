@@ -88,8 +88,10 @@ export default function ProjectsPage() {
       {/* Empty state */}
       {projects?.length === 0 && (
         <div className="flex flex-col items-center justify-center py-24 gap-4">
-          <div className="w-16 h-16 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center text-2xl">
-            📁
+          <div className="w-16 h-16 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" className="w-7 h-7 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+            </svg>
           </div>
           <p className="text-gray-400 font-medium">No hay proyectos aún</p>
           <p className="text-sm text-gray-600">Crea tu primer proyecto para empezar</p>

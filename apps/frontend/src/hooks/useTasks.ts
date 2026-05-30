@@ -18,6 +18,8 @@ export const useTasks = (projectId: string, filters: TaskFilters = {}) => {
     queryFn: () =>
       api.get(`/projects/${projectId}/tasks`, { params }).then((r) => r.data),
     enabled: !!projectId,
+    staleTime: 0,
+    refetchOnMount: true,
   });
 };
 
