@@ -3,10 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useProjects, useCreateProject, useUpdateProject, useDeleteProject } from "../hooks/useProjects";
+import { useProjects, useUpdateProject, useDeleteProject } from "../hooks/useProjects";
 import { useAuthStore } from "../store/authStore";
 import Modal from "../components/ui/Modal";
 import ConfirmModal from "../components/ui/ConfirmModal";
+import CreateProjectModal from "../components/ui/CreateProjectModal";
 import { Project } from "../types";
 import { ProjectCardSkeleton } from "../components/ui/Skeleton";
 
@@ -24,7 +25,6 @@ const labelClass = "text-sm font-medium text-gray-300";
 export default function ProjectsPage() {
   const navigate = useNavigate();
   const { data: projects, isLoading } = useProjects();
-  const createProject = useCreateProject();
   const updateProject = useUpdateProject();
   const deleteProject = useDeleteProject();
   const user = useAuthStore((s) => s.user);
@@ -33,14 +33,7 @@ export default function ProjectsPage() {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
 
-  const createForm = useForm<FormData>({ resolver: zodResolver(schema) });
   const editForm = useForm<FormData>({ resolver: zodResolver(schema) });
-
-  const onCreateSubmit = async (data: FormData) => {
-    await createProject.mutateAsync(data);
-    createForm.reset();
-    setCreateOpen(false);
-  };
 
   const onEditSubmit = async (data: FormData) => {
     if (!editingProject) return;
@@ -162,34 +155,7 @@ export default function ProjectsPage() {
         ))}
       </div>
 
-      {/* Modal crear */}
-      <Modal open={createOpen} onClose={() => { setCreateOpen(false); createForm.reset(); }} title="Nuevo proyecto">
-        <form onSubmit={createForm.handleSubmit(onCreateSubmit)} className="flex flex-col gap-4">
-          <div className="flex flex-col gap-1">
-            <label className={labelClass}>Nombre</label>
-            <input {...createForm.register("name")} placeholder="Nombre del proyecto" className={inputClass} />
-            {createForm.formState.errors.name && <p className="text-xs text-red-400">{createForm.formState.errors.name.message}</p>}
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="create-description" className={labelClass}>Descripción</label>
-            <textarea
-              id="create-description"
-              {...createForm.register("description")}
-              rows={3}
-              placeholder="Descripción opcional..."
-              className={`${inputClass} resize-none`}
-            />
-          </div>
-          <div className="flex justify-end gap-2 mt-2">
-            <button type="button" onClick={() => { setCreateOpen(false); createForm.reset(); }} className="px-4 py-2 rounded-xl border border-white/10 text-gray-400 hover:text-white hover:border-white/20 text-sm transition-all">
-              Cancelar
-            </button>
-            <button type="submit" disabled={createForm.formState.isSubmitting} className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white text-sm font-semibold transition-all disabled:opacity-50">
-              {createForm.formState.isSubmitting ? "Creando..." : "Crear"}
-            </button>
-          </div>
-        </form>
-      </Modal>
+      <CreateProjectModal open={createOpen} onClose={() => setCreateOpen(false)} />
 
       {/* Modal editar */}
       <Modal open={!!editingProject} onClose={() => setEditingProject(null)} title="Editar proyecto">

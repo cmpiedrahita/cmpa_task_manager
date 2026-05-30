@@ -12,7 +12,16 @@ export const findAllByUser = (userId: string, role: string) => {
     .select("tasks.*", "users.name as assignee_name")
     .leftJoin("users", "tasks.assignee_id", "users.id")
     .join("projects", "tasks.project_id", "projects.id");
-  if (role !== "admin") query.where("projects.owner_id", userId);
+
+  if (role !== "admin") {
+    query.where(function () {
+      this.where("projects.owner_id", userId).orWhereIn(
+        "tasks.project_id",
+        db("project_members").select("project_id").where({ user_id: userId, status: "accepted" })
+      );
+    });
+  }
+
   return query.orderBy("tasks.created_at", "desc");
 };
 

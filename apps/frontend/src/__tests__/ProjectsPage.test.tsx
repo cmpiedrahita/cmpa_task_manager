@@ -29,6 +29,11 @@ vi.mock("../components/ui/Modal", () => ({
     open ? <div>{children}</div> : null,
 }));
 
+vi.mock("../components/ui/CreateProjectModal", () => ({
+  default: ({ open }: { open: boolean }) =>
+    open ? <div>Modal crear proyecto</div> : null,
+}));
+
 describe("ProjectsPage", () => {
   beforeEach(() => {
     render(<ProjectsPage />);
