@@ -1,4 +1,4 @@
-import { Navigate, useNavigate, Link } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 
 const FEATURES = [
