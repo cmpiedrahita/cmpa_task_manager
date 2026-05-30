@@ -52,6 +52,6 @@ describe("ProjectsPage", () => {
   });
 
   it("muestra botón de nuevo proyecto", () => {
-    expect(screen.getByText("Nuevo proyecto")).toBeInTheDocument();
+    expect(screen.getByText("+ Nuevo proyecto")).toBeInTheDocument();
   });
 });
