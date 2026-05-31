@@ -274,4 +274,4 @@ Se usa React Query para cachear las respuestas del servidor, con `staleTime: 0` 
 
 ---
 
-> Desarrollado como prueba técnica — Senior Full Stack Developer
+> Desarrollado como prueba técnica — Full Stack Developer
