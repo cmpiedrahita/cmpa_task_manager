@@ -13,8 +13,8 @@ const schema = z.object({
 
 type FormData = z.infer<typeof schema>;
 
-const inputClass = "px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-600 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/50 transition-all text-sm w-full";
-const labelClass = "text-sm font-medium text-gray-300";
+const inputClass = "px-4 py-3 rounded-xl bg-gray-100 dark:bg-white/5 border border-gray-300 dark:border-white/10 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/50 transition-all text-sm w-full";
+const labelClass = "text-sm font-medium text-gray-700 dark:text-gray-300";
 
 interface Props {
   open: boolean;

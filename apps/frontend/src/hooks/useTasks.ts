@@ -32,7 +32,6 @@ export const useCreateTask = (projectId: string) => {
       qc.invalidateQueries({ queryKey: ["tasks", projectId] });
       toast.success("Tarea creada");
     },
-    onError: () => toast.error("Error al crear tarea"),
   });
 };
 
