@@ -28,18 +28,17 @@ const COLUMNS: { id: TaskStatus; label: string; color: string }[] = [
 const taskSchema = z.object({
   title: z.string().min(1, "El título es obligatorio").min(2, "El título debe tener al menos 2 caracteres"),
   description: z.string().optional(),
-  priority: z.enum(["low", "medium", "high", "critical"]).optional(),
-  assignee_id: z.string().optional(),
-  due_date: z.string().optional().refine((val) => {
-    if (!val) return true;
+  priority: z.enum(["low", "medium", "high", "critical"], { required_error: "Selecciona una prioridad" }).optional(),
+  assignee_id: z.string().min(1, "Debes asignar la tarea a alguien"),
+  due_date: z.string().min(1, "La fecha límite es obligatoria").refine((val) => {
     return new Date(val) >= new Date(new Date().toISOString().split("T")[0]);
   }, "La fecha límite no puede ser anterior a hoy"),
 });
 
 type TaskFormData = z.infer<typeof taskSchema>;
 
-const inputClass = "px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-600 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/50 transition-all text-sm w-full [&_option]:bg-gray-900 [&_option]:text-white";
-const labelClass = "text-sm font-medium text-gray-300";
+const inputClass = "px-4 py-3 rounded-xl bg-white/5 dark:bg-white/5 bg-gray-100 border border-gray-300 dark:border-white/10 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 outline-none focus:border-violet-500 focus:ring-1 focus:ring-violet-500/50 transition-all text-sm w-full [&_option]:bg-white [&_option]:text-gray-900 dark:[&_option]:bg-gray-900 dark:[&_option]:text-white";
+const labelClass = "text-sm font-medium text-gray-700 dark:text-gray-300";
 
 function TaskComments({ taskId }: { taskId: string }) {
   const { data: comments = [] } = useComments(taskId);
@@ -108,6 +107,11 @@ export default function ProjectDetailPage() {
   const user = useAuthStore((s) => s.user);
   const { data: members = [] } = useMembers(id!);
   const isOwner = project?.owner_id === user?.id || user?.role === "admin";
+
+  const assignableMembers = [
+    ...(user ? [{ user_id: user.id, name: user.name }] : []),
+    ...members.filter((m) => m.user_id !== user?.id),
+  ];
   const [filters, setFilters] = useState({ search: "", priority: "" });
   const { data: serverTasks = [], isLoading: tasksLoading } = useTasks(id!, filters);
   const [localTasks, setLocalTasks] = useState<Task[]>([]);
@@ -182,8 +186,10 @@ export default function ProjectDetailPage() {
       await createTask.mutateAsync(data);
       reset();
       setModalOpen(false);
-    } catch {
-      toast.error("No se pudo crear la tarea. Intenta de nuevo.");
+    } catch (e: unknown) {
+      const error = e as { response?: { data?: { error?: string; message?: string } } };
+      const msg = error.response?.data?.error ?? error.response?.data?.message ?? "No se pudo crear la tarea";
+      toast.error(msg);
     }
   };
 
@@ -324,15 +330,17 @@ export default function ProjectDetailPage() {
               <option value="high">Alta</option>
               <option value="critical">Crítica</option>
             </select>
+            {errors.priority && <p className="text-xs text-red-400">{errors.priority.message}</p>}
           </div>
           <div className="flex flex-col gap-1">
             <label className={labelClass}>Asignar a</label>
             <select {...register("assignee_id")} className={inputClass}>
               <option value="">Sin asignar</option>
-              {members.map((m) => (
+              {assignableMembers.map((m) => (
                 <option key={m.user_id} value={m.user_id}>{m.name}</option>
               ))}
             </select>
+            {errors.assignee_id && <p className="text-xs text-red-400">{errors.assignee_id.message}</p>}
           </div>
           <div className="flex flex-col gap-1">
             <label className={labelClass}>Fecha límite</label>
@@ -370,15 +378,17 @@ export default function ProjectDetailPage() {
               <option value="high">Alta</option>
               <option value="critical">Crítica</option>
             </select>
+            {editForm.formState.errors.priority && <p className="text-xs text-red-400">{editForm.formState.errors.priority.message}</p>}
           </div>
           <div className="flex flex-col gap-1">
             <label className={labelClass}>Asignar a</label>
             <select {...editForm.register("assignee_id")} className={inputClass}>
               <option value="">Sin asignar</option>
-              {members.map((m) => (
+              {assignableMembers.map((m) => (
                 <option key={m.user_id} value={m.user_id}>{m.name}</option>
               ))}
             </select>
+            {editForm.formState.errors.assignee_id && <p className="text-xs text-red-400">{editForm.formState.errors.assignee_id.message}</p>}
           </div>
           <div className="flex flex-col gap-1">
             <label className={labelClass}>Fecha límite</label>
