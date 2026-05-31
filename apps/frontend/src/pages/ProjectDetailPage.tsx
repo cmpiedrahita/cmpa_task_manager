@@ -29,7 +29,7 @@ const taskSchema = z.object({
   title: z.string().min(1, "El título es obligatorio").min(2, "El título debe tener al menos 2 caracteres"),
   description: z.string().optional(),
   priority: z.enum(["low", "medium", "high", "critical"], { required_error: "Selecciona una prioridad" }).optional(),
-  assignee_id: z.string().min(1, "Debes asignar la tarea a alguien"),
+  assignee_id: z.string().optional(),
   due_date: z.string().min(1, "La fecha límite es obligatoria").refine((val) => {
     return new Date(val) >= new Date(new Date().toISOString().split("T")[0]);
   }, "La fecha límite no puede ser anterior a hoy"),
@@ -56,7 +56,7 @@ function TaskComments({ taskId }: { taskId: string }) {
 
   return (
     <div className="flex flex-col gap-3 mt-2">
-      <h4 className="text-sm font-semibold text-gray-300">
+      <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
         Comentarios ({comments.length})
       </h4>
       <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
@@ -64,9 +64,9 @@ function TaskComments({ taskId }: { taskId: string }) {
           <p className="text-xs text-gray-500">Sin comentarios aún.</p>
         )}
         {comments.map((c) => (
-          <div key={c.id} className="bg-white/5 border border-white/10 rounded-lg px-3 py-2">
+          <div key={c.id} className="bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-3 py-2">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-medium text-gray-300">{c.author_name}</span>
+              <span className="text-xs font-medium text-gray-700 dark:text-gray-300">{c.author_name}</span>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-gray-500">
                   {new Date(c.created_at).toLocaleDateString()}
@@ -78,7 +78,7 @@ function TaskComments({ taskId }: { taskId: string }) {
                 )}
               </div>
             </div>
-            <p className="text-sm text-gray-400 mt-1">{c.content}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{c.content}</p>
           </div>
         ))}
       </div>
@@ -87,7 +87,7 @@ function TaskComments({ taskId }: { taskId: string }) {
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Escribe un comentario..."
-          className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white placeholder-gray-600 outline-none focus:border-violet-500 transition-all text-sm"
+          className="flex-1 px-3 py-2 rounded-xl bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 outline-none focus:border-violet-500 transition-all text-sm"
         />
         <button
           type="submit"
@@ -107,6 +107,7 @@ export default function ProjectDetailPage() {
   const user = useAuthStore((s) => s.user);
   const { data: members = [] } = useMembers(id!);
   const isOwner = project?.owner_id === user?.id || user?.role === "admin";
+  const isTeamProject = project?.type === "team" || false;
 
   const assignableMembers = [
     ...(user ? [{ user_id: user.id, name: user.name }] : []),
@@ -123,6 +124,7 @@ export default function ProjectDetailPage() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
+  const [assigneeError, setAssigneeError] = useState("");
 
   const editForm = useForm<TaskFormData>({ resolver: zodResolver(taskSchema) });
 
@@ -182,6 +184,11 @@ export default function ProjectDetailPage() {
   };
 
   const onSubmit = async (data: TaskFormData) => {
+    if (isTeamProject && !data.assignee_id) {
+      setAssigneeError("Debes asignar la tarea a alguien");
+      return;
+    }
+    setAssigneeError("");
     try {
       await createTask.mutateAsync(data);
       reset();
@@ -278,7 +285,7 @@ export default function ProjectDetailPage() {
                               )}
                               {task.due_date && (
                                 <p className={`text-xs ${isOverdue ? "text-red-400 font-medium" : "text-gray-400"}`}>
-                                  Vence: {new Date(task.due_date).toLocaleDateString()}
+                                  Vence: {task.due_date.split("T")[0].split("-").reverse().join("/")}
                                 </p>
                               )}
                               <div className="flex gap-1 mt-1">
@@ -332,23 +339,25 @@ export default function ProjectDetailPage() {
             </select>
             {errors.priority && <p className="text-xs text-red-400">{errors.priority.message}</p>}
           </div>
-          <div className="flex flex-col gap-1">
-            <label className={labelClass}>Asignar a</label>
-            <select {...register("assignee_id")} className={inputClass}>
-              <option value="">Sin asignar</option>
-              {assignableMembers.map((m) => (
-                <option key={m.user_id} value={m.user_id}>{m.name}</option>
-              ))}
-            </select>
-            {errors.assignee_id && <p className="text-xs text-red-400">{errors.assignee_id.message}</p>}
-          </div>
+          {isTeamProject && (
+            <div className="flex flex-col gap-1">
+              <label className={labelClass}>Asignar a</label>
+              <select {...register("assignee_id")} className={inputClass}>
+                <option value="">Sin asignar</option>
+                {assignableMembers.map((m) => (
+                  <option key={m.user_id} value={m.user_id}>{m.name}</option>
+                ))}
+              </select>
+              {assigneeError && <p className="text-xs text-red-400">{assigneeError}</p>}
+            </div>
+          )}
           <div className="flex flex-col gap-1">
             <label className={labelClass}>Fecha límite</label>
             <input type="date" min={new Date().toISOString().split("T")[0]} {...register("due_date")} className={inputClass} />
             {errors.due_date && <p className="text-xs text-red-400">{errors.due_date.message}</p>}
           </div>
           <div className="flex justify-end gap-2 mt-2">
-            <button type="button" onClick={() => { setModalOpen(false); reset(); }} className="px-4 py-2 rounded-xl border border-white/10 text-gray-400 hover:text-white hover:border-white/20 text-sm transition-all">
+            <button type="button" onClick={() => { setModalOpen(false); reset(); setAssigneeError(""); }} className="px-4 py-2 rounded-xl border border-white/10 text-gray-400 hover:text-white hover:border-white/20 text-sm transition-all">
               Cancelar
             </button>
             <button type="submit" disabled={isSubmitting} className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white text-sm font-semibold transition-all disabled:opacity-50">
@@ -380,16 +389,18 @@ export default function ProjectDetailPage() {
             </select>
             {editForm.formState.errors.priority && <p className="text-xs text-red-400">{editForm.formState.errors.priority.message}</p>}
           </div>
-          <div className="flex flex-col gap-1">
-            <label className={labelClass}>Asignar a</label>
-            <select {...editForm.register("assignee_id")} className={inputClass}>
-              <option value="">Sin asignar</option>
-              {assignableMembers.map((m) => (
-                <option key={m.user_id} value={m.user_id}>{m.name}</option>
-              ))}
-            </select>
-            {editForm.formState.errors.assignee_id && <p className="text-xs text-red-400">{editForm.formState.errors.assignee_id.message}</p>}
-          </div>
+          {isTeamProject && (
+            <div className="flex flex-col gap-1">
+              <label className={labelClass}>Asignar a</label>
+              <select {...editForm.register("assignee_id")} className={inputClass}>
+                <option value="">Sin asignar</option>
+                {assignableMembers.map((m) => (
+                  <option key={m.user_id} value={m.user_id}>{m.name}</option>
+                ))}
+              </select>
+              {editForm.formState.errors.assignee_id && <p className="text-xs text-red-400">{editForm.formState.errors.assignee_id.message}</p>}
+            </div>
+          )}
           <div className="flex flex-col gap-1">
             <label className={labelClass}>Fecha límite</label>
             <input type="date" min={new Date().toISOString().split("T")[0]} {...editForm.register("due_date")} className={inputClass} />
@@ -423,7 +434,7 @@ export default function ProjectDetailPage() {
             )}
             {selectedTask.due_date && (
               <p className="text-sm text-gray-400">
-                Vence: {new Date(selectedTask.due_date).toLocaleDateString()}
+                Vence: {selectedTask.due_date.split("T")[0].split("-").reverse().join("/")}
               </p>
             )}
             <hr className="border-white/10" />

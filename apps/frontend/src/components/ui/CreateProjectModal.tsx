@@ -163,7 +163,7 @@ export default function CreateProjectModal({ open, onClose }: Props) {
               {invitedUsers.map((u) => (
                 <div key={u.id} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
                   <span className="text-xs text-emerald-400">✓</span>
-                  <p className="text-sm text-white">{u.name}</p>
+                  <p className="text-sm text-gray-900 dark:text-white">{u.name}</p>
                 </div>
               ))}
             </div>

@@ -8,7 +8,7 @@ export const getById = async (id: string) => {
   return project;
 };
 
-export const create = (data: { name: string; description?: string }, ownerId: string) =>
+export const create = (data: { name: string; description?: string; type?: string }, ownerId: string) =>
   repo.create({ ...data, owner_id: ownerId });
 
 export const update = async (id: string, data: Partial<{ name: string; description: string; status: string }>, userId: string, role: string) => {

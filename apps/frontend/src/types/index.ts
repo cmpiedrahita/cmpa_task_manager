@@ -17,6 +17,7 @@ export interface Project {
   owner_id: string;
   owner_name: string;
   status: ProjectStatus;
+  type: "personal" | "team";
   created_at: string;
   updated_at: string;
 }
