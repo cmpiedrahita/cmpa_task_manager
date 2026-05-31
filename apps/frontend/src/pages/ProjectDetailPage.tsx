@@ -9,6 +9,7 @@ import { useTasks, useCreateTask, useDeleteTask } from "../hooks/useTasks";
 import { useComments, useCreateComment, useDeleteComment } from "../hooks/useComments";
 import { useAuthStore } from "../store/authStore";
 import { useQueryClient } from "@tanstack/react-query";
+import { useMembers } from "../hooks/useMembers";
 import { Task, TaskStatus } from "../types";
 import { StatusBadge, PriorityBadge } from "../components/ui/Badge";
 import Modal from "../components/ui/Modal";
@@ -28,6 +29,7 @@ const taskSchema = z.object({
   title: z.string().min(1, "El título es obligatorio").min(2, "El título debe tener al menos 2 caracteres"),
   description: z.string().optional(),
   priority: z.enum(["low", "medium", "high", "critical"]).optional(),
+  assignee_id: z.string().optional(),
   due_date: z.string().optional().refine((val) => {
     if (!val) return true;
     return new Date(val) >= new Date(new Date().toISOString().split("T")[0]);
@@ -103,6 +105,9 @@ function TaskComments({ taskId }: { taskId: string }) {
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { data: project } = useProject(id!);
+  const user = useAuthStore((s) => s.user);
+  const { data: members = [] } = useMembers(id!);
+  const isOwner = project?.owner_id === user?.id || user?.role === "admin";
   const [filters, setFilters] = useState({ search: "", priority: "" });
   const { data: serverTasks = [], isLoading: tasksLoading } = useTasks(id!, filters);
   const [localTasks, setLocalTasks] = useState<Task[]>([]);
@@ -122,6 +127,7 @@ export default function ProjectDetailPage() {
       title: task.title,
       description: task.description,
       priority: task.priority,
+      assignee_id: task.assignee_id ?? "",
       due_date: task.due_date?.split("T")[0] ?? "",
     });
     setEditingTask(task);
@@ -193,7 +199,7 @@ export default function ProjectDetailPage() {
         </div>
         <button
           onClick={() => setModalOpen(true)}
-          className="px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white text-sm font-semibold transition-all shadow-lg shadow-violet-500/20 shrink-0"
+          className={`px-4 py-2 rounded-xl bg-gradient-to-r from-violet-600 to-blue-600 hover:from-violet-500 hover:to-blue-500 text-white text-sm font-semibold transition-all shadow-lg shadow-violet-500/20 shrink-0 ${!isOwner ? "hidden" : ""}`}
         >
           + Nueva tarea
         </button>
@@ -273,12 +279,16 @@ export default function ProjectDetailPage() {
                                 <button onClick={() => setSelectedTask(task)} className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:border-violet-500/50 hover:text-violet-500 dark:hover:text-violet-400 transition-all">
                                   Ver
                                 </button>
-                                <button onClick={() => openEdit(task)} className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:border-blue-500/50 hover:text-blue-500 dark:hover:text-blue-400 transition-all">
-                                  Editar
-                                </button>
-                                <button onClick={() => setDeletingTaskId(task.id)} className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:border-red-500/50 hover:text-red-400 transition-all">
-                                  Eliminar
-                                </button>
+                                {isOwner && (
+                                  <>
+                                    <button onClick={() => openEdit(task)} className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:border-blue-500/50 hover:text-blue-500 dark:hover:text-blue-400 transition-all">
+                                      Editar
+                                    </button>
+                                    <button onClick={() => setDeletingTaskId(task.id)} className="text-xs px-2.5 py-1 rounded-lg border border-gray-200 dark:border-white/10 text-gray-500 dark:text-gray-400 hover:border-red-500/50 hover:text-red-400 transition-all">
+                                      Eliminar
+                                    </button>
+                                  </>
+                                )}
                               </div>
                             </div>
                           );
@@ -316,6 +326,15 @@ export default function ProjectDetailPage() {
             </select>
           </div>
           <div className="flex flex-col gap-1">
+            <label className={labelClass}>Asignar a</label>
+            <select {...register("assignee_id")} className={inputClass}>
+              <option value="">Sin asignar</option>
+              {members.map((m) => (
+                <option key={m.user_id} value={m.user_id}>{m.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
             <label className={labelClass}>Fecha límite</label>
             <input type="date" min={new Date().toISOString().split("T")[0]} {...register("due_date")} className={inputClass} />
             {errors.due_date && <p className="text-xs text-red-400">{errors.due_date.message}</p>}
@@ -350,6 +369,15 @@ export default function ProjectDetailPage() {
               <option value="medium">Media</option>
               <option value="high">Alta</option>
               <option value="critical">Crítica</option>
+            </select>
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className={labelClass}>Asignar a</label>
+            <select {...editForm.register("assignee_id")} className={inputClass}>
+              <option value="">Sin asignar</option>
+              {members.map((m) => (
+                <option key={m.user_id} value={m.user_id}>{m.name}</option>
+              ))}
             </select>
           </div>
           <div className="flex flex-col gap-1">

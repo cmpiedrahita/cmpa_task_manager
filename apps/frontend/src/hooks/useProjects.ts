@@ -19,7 +19,7 @@ export const useProject = (id: string) =>
 export const useCreateProject = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (data: { name: string; description?: string }) =>
+    mutationFn: (data: { name: string; description?: string; type?: string }) =>
       api.post("/projects", data).then((r) => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["projects"] });
