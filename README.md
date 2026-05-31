@@ -17,7 +17,6 @@
 | Servicio | URL |
 |----------|-----|
 | Frontend | https://cmpa-frontend.onrender.com |
-| Backend API | https://cmpa-backend.onrender.com/api |
 | Swagger Docs | https://cmpa-backend.onrender.com/api/docs |
 
 > **Nota:** El backend está desplegado en Render con plan gratuito. La primera petición puede tardar ~30 segundos en despertar si estuvo inactivo.
