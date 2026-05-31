@@ -207,7 +207,7 @@ export default function LandingPage() {
           </div>
         </div>
         <div className="max-w-7xl mx-auto px-6 mt-12 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-xs text-gray-600">© 2024 CMPA Task Manager. Todos los derechos reservados.</p>
+          <p className="text-xs text-gray-600">© 2026 CMPA Task Manager. Todos los derechos reservados.</p>
           <div className="flex gap-6">
             {["Privacidad", "Términos", "Cookies"].map((l) => (
               <a key={l} href="#" className="text-xs text-gray-600 hover:text-gray-400 transition-colors">{l}</a>
