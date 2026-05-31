@@ -36,6 +36,7 @@ export const useInvitations = () =>
   useQuery<Invitation[]>({
     queryKey: ["invitations"],
     queryFn: () => api.get("/invitations").then((r) => r.data),
+    refetchInterval: 30000,
   });
 
 export const useInviteMember = (projectId: string) => {
